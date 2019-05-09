@@ -8,7 +8,6 @@ use File::Basename qw/dirname basename/;
 use File::Spec::Functions qw/catfile/;
 
 use Data::Dumper;
-# use Data::Dump qw/dump/;
 
 my $__abspath__ = abs_path __FILE__;
 my $__dir__     = dirname $__abspath__;
@@ -16,11 +15,39 @@ my $__file__    = basename $__abspath__;
 
 my $g_applist_yaml;
 
-sub init {
-    my $apm_home = catfile($ENV{"HOME"}, ".apm");
+my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
 
-    if (-d $apm_home) {
-        $g_applist_yaml = catfile($apm_home, "applist.yml");
+my $default_msg =<< "HEREDOC";
+Try "apc help" for more options
+
+Copyright 2019-@{[$year+1900]}, zhanglintc
+HEREDOC
+
+my $help_msg =<< "HEREDOC";
+Usage:
+  apc [command]
+
+Commands:
+  show\tshow status of all your apps
+  start\tstart all your apps
+  stop\tstop all your apps
+  list\tshow "~/.app-controller/app-list.yml"
+  add\tadd an app to "~/.app-controller/app-list.yml"
+  del\tdel an app from "~/.app-controller/app-list.yml"
+  help\tshow this help
+HEREDOC
+
+my $unknown_msg =<< "HEREDOC";
+apc: command unknown
+
+@{[sub{chomp($_=$help_msg);$_}->()]}
+HEREDOC
+
+sub init {
+    my $apc_home = catfile($ENV{"HOME"}, ".app-controller");
+
+    if (-d $apc_home) {
+        $g_applist_yaml = catfile($apc_home, "applist.yml");
     }
     else {
         $g_applist_yaml = catfile($__dir__, "applist.yml");
@@ -95,7 +122,7 @@ sub active_or_down {
 sub show_status {
     my $separator = "\t  ";
 
-    say "status:";
+    say "Status:";
     say "-" x 30;
     say "Status${separator}Pid${separator}Port${separator}Applictaion";
 
@@ -120,7 +147,7 @@ sub show_status {
 }
 
 sub activate_all {
-    say "try to start all apps";
+    say "Try to start all apps";
 
     my $app_list = load_yaml_config();
 
@@ -141,14 +168,14 @@ sub activate_all {
         }
     }
 
-    say "start all apps done";
+    say "Start all apps done";
     say "";
 
     show_status();
 }
 
 sub stop_all {
-    say "try to stop all apps";
+    say "Try to stop all apps";
 
     my $app_list = load_yaml_config();
     for (@$app_list) {
@@ -165,7 +192,7 @@ sub stop_all {
         }
     }
 
-    say "stop all apps done";
+    say "Stop all apps done";
     say "";
 
     show_status();
@@ -174,11 +201,11 @@ sub stop_all {
 sub show_app_list {
     my $app_list = load_yaml_config();
 
-    say "items:";
+    say "app-list.yml:";
     say "-" x 30;
 
     unless (@$app_list) {
-        say "applist is null";
+        say "null";
     }
 
     for my $idx (0 .. $#{$app_list}) {
@@ -192,8 +219,8 @@ sub add_app {
     my $name = shift @ARGV;
 
     if (!defined $name) {
-        say "usage:";
-        say "$__file__ add foo.bar";
+        say "Filename missing";
+        say 'Please use "apc add [filename]"';
         exit;
     }
 
@@ -201,28 +228,25 @@ sub add_app {
     my $full_path = abs_path $name;
 
     if (-d $full_path) {
-        say "given path is a directory:";
-        say "$full_path";
+        say qq/"$full_path" is a directory/;
         exit;
     }
 
     if (!-f $full_path) {
-        say "given path is not an existing file:";
-        say "$full_path";
+        say qq/"$full_path" is not an existing file/;
         exit;
     }
 
     if (grep {/$full_path/} @$app_list)
     {
-        say "given path already exist in applist:";
-        say "$full_path";
+        say qq/"$full_path" has already existed in app-list.yml\n/;
         show_app_list();
         exit;
     }
 
     push @$app_list, $full_path;
     dump_yaml_config($app_list);
-    say "add success, current list is:";
+    say "Add success, current list is:\n";
     show_app_list();
 }
 
@@ -230,29 +254,28 @@ sub del_app {
     my $seq = shift @ARGV;
 
     if (!defined $seq or $seq =~ /[^\d]+/) {
-        say "usage:";
-        say "$__file__ del 3";
+        say "Parameter missing or not a number";
+        say 'Please use "apc del [index]"';
         exit;
     }
 
     my $app_list = load_yaml_config();
 
     unless (@$app_list) {
-        say "app_list is null";
-        say "del cannot be done";
+        say "Delete cannot be done because app-list.yml is null\n";
+        show_app_list();
         exit;
     }
 
     if ($seq > $#{$app_list}){
-        say "given number out of range";
-        say "available: 0 ~ $#{$app_list}";
+        say "Given index out of range. Available: 0 ~ $#{$app_list}\n";
         show_app_list();
         exit;
     }
 
     splice @$app_list, $seq, 1;
     dump_yaml_config($app_list);
-    say "delete success, current list is:";
+    say "Delete success, current list is:\n";
     show_app_list();
 }
 
@@ -262,11 +285,7 @@ sub main {
     my $command = shift @ARGV;
 
     if (!defined $command) {
-        say "usage:";
-        say "$__file__ [command]";
-        say "";
-        say"[command] can be: show/start/stop/list/add/del";
-        say "";
+        say $default_msg;
     }
     elsif ($command eq "show") {
         show_status();
@@ -287,25 +306,10 @@ sub main {
         del_app();
     }
     elsif ($command eq "help") {
-        say "usage:";
-        say "$__file__ [command]";
-        say "";
-        say "command:";
-        say "show:  show app status";
-        say "start: start all apps";
-        say "stop:  stop all apps";
-        say "list:  list all apps with index";
-        say "add:   add an app; eg $__file__ add 1";
-        say "del:   del an app; eg $__file__ del 1";
-        say "help:  show this help";
-        say "";
+        say $help_msg;
     }
     else {
-        say "command cannot be recognized";
-        say "";
-        say "usage:";
-        say "$__file__ show/start/stop/list/add/del";
-        say "";
+        say $unknown_msg;
     }
 }
 
