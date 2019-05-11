@@ -75,7 +75,7 @@ sub dump_yaml_config {
 sub grep_app_name {
     my $name = shift;
 
-    my @pids = `ps -ef | grep -v grep | grep $name | awk '{print \$2}'`;
+    my @pids = `ps -ef | grep -v -w grep | grep $name | awk '{print \$2}'`;
 
     my @details;
     for my $pid (@pids) {
