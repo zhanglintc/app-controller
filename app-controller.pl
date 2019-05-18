@@ -28,13 +28,14 @@ Usage:
   apc [command]
 
 Commands:
-  show\tshow status of all your apps
-  start\tstart all your apps
-  stop\tstop all your apps
-  list\tshow "~/.app-controller/app-list.yml"
-  add\tadd an app to "~/.app-controller/app-list.yml"
-  del\tdel an app from "~/.app-controller/app-list.yml"
-  help\tshow this help
+  show  \tshow status of all your apps
+  start \tstart all your apps
+  stop  \tstop all your apps
+  restart   \trestart all your apps
+  list  \tshow "~/.app-controller/app-list.yml"
+  add   \tadd an app to "~/.app-controller/app-list.yml"
+  del   \tdel an app from "~/.app-controller/app-list.yml"
+  help  \tshow this help
 HEREDOC
 
 my $unknown_msg =<< "HEREDOC";
@@ -178,6 +179,7 @@ sub stop_all {
     say "Try to stop all apps";
 
     my $app_list = load_yaml_config();
+
     for (@$app_list) {
         my $expect_name = $_;
         my $dir = dirname $_;
@@ -193,6 +195,48 @@ sub stop_all {
     }
 
     say "Stop all apps done";
+    say "";
+
+    show_status();
+}
+
+sub restart_all {
+    say "Try to stop all apps";
+
+    my $app_list = load_yaml_config();
+
+    for (@$app_list) {
+        my $expect_name = $_;
+        my $dir = dirname $_;
+        my $name = basename $_;
+
+        my $details = grep_app_name($name);
+        my @matched_items = grep {$_->{full_path} eq $expect_name} @$details;
+
+        for my $item (@matched_items) {
+            my $pid = $item->{pid};
+            `kill -9 $pid`;
+
+            unless (active_or_down($_, $name)) {
+                my $exec = "";
+                $exec = "ruby" if grep {/\.rb/} $name;
+                $exec = "python" if grep {/\.py/} $name;
+                $exec = "perl" if grep {/\.pl/} $name;
+
+                my $cmd = "cd $dir; $exec ./$name>/dev/null 2>&1 \&";
+                system "$cmd";
+            }
+
+            my $new_details = grep_app_name($name);
+            my @new_matched_items = grep {$_->{full_path} eq $expect_name} @$new_details;
+            for my $item (@new_matched_items) {
+                my $new_pid = $item->{pid};
+                say "- restart $_: $pid => $new_pid";
+            }
+        }
+    }
+
+    say "Restart all apps done";
     say "";
 
     show_status();
@@ -295,6 +339,9 @@ sub main {
     }
     elsif ($command eq "stop") {
         stop_all();
+    }
+    elsif ($command eq "restart") {
+        restart_all();
     }
     elsif ($command eq "list") {
         show_app_list();
