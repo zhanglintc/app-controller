@@ -18,6 +18,7 @@ my $g_applist_yaml;
 my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
 
 my $default_msg =<< "HEREDOC";
+Please use: apc [command]
 Try "apc help" for more options
 
 Copyright 2019-@{[$year+1900]}, zhanglintc
