@@ -148,12 +148,32 @@ sub show_status {
     say "-" x 30;
 }
 
-sub activate_all {
-    say "Try to start all apps";
+sub start_all {
+    my $idx = shift;
+    my $quilt = shift;
+
+    my $result_hash = {};
 
     my $app_list = load_yaml_config();
 
+    $idx = $idx // shift @ARGV;
+    if (defined $idx) {
+        if ($idx =~ /^[0-9]$/ and grep {/$idx/} 0..$#{$app_list}) {
+            say "Try to start app No.$idx: $$app_list[$idx]" unless $quilt;
+            $app_list = [$$app_list[$idx]];
+        }
+        else {
+            say "Given index out of range. Available: 0 ~ $#{$app_list}\n" unless $quilt;
+            show_app_list();
+            exit;
+        }
+    }
+    else {
+        say "Try to start all apps" unless $quilt;
+    }
+
     for (@$app_list) {
+        my $expect_name = $_;
         my $dir = dirname $_;
         my $name = basename $_;
 
@@ -165,21 +185,48 @@ sub activate_all {
 
             my $cmd = "cd $dir; $exec ./$name>/dev/null 2>&1 \&";
 
-            say " - activate $_";
+            say " - activate $_" unless $quilt;
             system "$cmd";
+
+            my $details = grep_app_name($name);
+            my @matched_items = grep {$_->{full_path} eq $expect_name} @$details;
+            for my $item (@matched_items) {
+                my $pid = $item->{pid};
+                $result_hash->{$_} = $pid;
+            }
         }
     }
 
-    say "Start all apps done";
-    say "";
+    say "Start done" unless $quilt;
+    say "" unless $quilt;
 
-    show_status();
+    show_status() unless $quilt;
+    return $result_hash;
 }
 
 sub stop_all {
-    say "Try to stop all apps";
+    my $idx = shift;
+    my $quilt = shift;
+
+    my $result_hash = {};
 
     my $app_list = load_yaml_config();
+
+    my $idx = $idx // shift @ARGV;
+    if (defined $idx) {
+        if ($idx =~ /^[0-9]$/ and grep {/$idx/} 0..$#{$app_list}) {
+            say "Try to stop app No.$idx: $$app_list[$idx]" unless $quilt;
+            $app_list = [$$app_list[$idx]];
+        }
+        else {
+            say "Given index out of range. Available: 0 ~ $#{$app_list}\n";
+            show_app_list();
+            exit;
+        }
+    }
+    else {
+        say "Try to stop all apps" unless $quilt;
+    }
 
     for (@$app_list) {
         my $expect_name = $_;
@@ -191,53 +238,50 @@ sub stop_all {
 
         for my $item (@matched_items) {
             my $pid = $item->{pid};
-            `kill -9 $pid`;
+            system "kill -9 $pid";
+            say " - stop $_" unless $quilt;
+            $result_hash->{$_} = $pid;
         }
     }
 
-    say "Stop all apps done";
-    say "";
+    say "Stop done" unless $quilt;
+    say "" unless $quilt;
 
-    show_status();
+    show_status() unless $quilt;
+    return $result_hash;
 }
 
 sub restart_all {
-    say "Try to stop all apps";
-
     my $app_list = load_yaml_config();
 
-    for (@$app_list) {
-        my $expect_name = $_;
-        my $dir = dirname $_;
-        my $name = basename $_;
-
-        my $details = grep_app_name($name);
-        my @matched_items = grep {$_->{full_path} eq $expect_name} @$details;
-
-        for my $item (@matched_items) {
-            my $pid = $item->{pid};
-            `kill -9 $pid`;
-
-            unless (active_or_down($_, $name)) {
-                my $exec = "";
-                $exec = "ruby" if grep {/\.rb/} $name;
-                $exec = "python" if grep {/\.py/} $name;
-                $exec = "perl" if grep {/\.pl/} $name;
-
-                my $cmd = "cd $dir; $exec ./$name>/dev/null 2>&1 \&";
-                system "$cmd";
-            }
-
-            my $new_details = grep_app_name($name);
-            my @new_matched_items = grep {$_->{full_path} eq $expect_name} @$new_details;
-            for my $item (@new_matched_items) {
-                my $new_pid = $item->{pid};
-                say "- restart $_: $pid => $new_pid";
-            }
+    my $idx = shift @ARGV;
+    if (defined $idx) {
+        if ($idx =~ /^[0-9]$/ and grep {/$idx/} 0..$#{$app_list}) {
+            say "Try to restart app No.$idx: $$app_list[$idx]" unless $quilt;
+            $app_list = [$$app_list[$idx]];
+        }
+        else {
+            say "Given index out of range. Available: 0 ~ $#{$app_list}\n";
+            show_app_list();
+            exit;
         }
     }
+    else {
+        say "Try to restart all apps";
+    }
 
-    say "Restart all apps done";
+    my $stop_result = stop_all($idx, 1);
+    my $start_result = start_all($idx, 1);
+
+    foreach (keys %$stop_result)
+    {
+        my $old_pid = $stop_result->{$_};
+        my $new_pid = $start_result->{$_};
+
+        say " - restart $_: $old_pid => $new_pid";
+    }
+
+    say "Restart done";
     say "";
 
     show_status();
@@ -336,7 +380,7 @@ sub main {
         show_status();
     }
     elsif ($command eq "start") {
-        activate_all();
+        start_all();
     }
     elsif ($command eq "stop") {
         stop_all();
