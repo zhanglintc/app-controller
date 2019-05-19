@@ -122,14 +122,15 @@ sub active_or_down {
 }
 
 sub show_status {
-    my $separator = "\t  ";
+    my $separator = "\t";
 
     say "Status:";
     say "-" x 30;
-    say "Status${separator}Pid${separator}Port${separator}Applictaion";
+    say "No${separator}Status${separator}Pid${separator}Port${separator}Applictaion";
 
     my $app_list = load_yaml_config();
 
+    my $idx = 0;
     for (@$app_list) {
         my $dir = dirname $_;
         my $name = basename $_;
@@ -142,7 +143,7 @@ sub show_status {
         my $port = $item->{port} // "-";
         my $full_path = $item->{full_path} // $_;
 
-        say "${status}${separator}${pid}${separator}${port}${separator}${full_path}";
+        say "@{[$idx++]}${separator}${status}${separator}${pid}${separator}${port}${separator}${full_path}";
     }
 
     say "-" x 30;
