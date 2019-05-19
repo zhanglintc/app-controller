@@ -44,6 +44,27 @@ apc show
 # start all apps
 apc start
 
+# start given app
+apc start 0
+
 # stop all apps
 apc stop
+
+# stop given app
+apc stop 0
+
+# restart all apps
+apc restart
+
+# restart given app
+apc restart 0
+
+# add an app to control list
+apc add foo.bar
+
+# show control list
+apc list
+
+# del an app from control list
+apc del 0
 ```
