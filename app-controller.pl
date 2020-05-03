@@ -177,12 +177,20 @@ sub start_all {
         my $expect_name = $_;
         my $dir = dirname $_;
         my $name = basename $_;
+        my $abs_path = catfile($dir, $name);
 
         unless (active_or_down($_, $name)) {
             my $exec = "";
-            $exec = "ruby" if grep {/\.rb/} $name;
-            $exec = "python" if grep {/\.py/} $name;
-            $exec = "perl" if grep {/\.pl/} $name;
+
+            chomp(my $shebang = `head -n1 $abs_path`);
+            if ($shebang =~ s/^#!//) {
+                $exec = $shebang;
+            }
+            else {
+                $exec = "ruby" if grep {/\.rb/} $name;
+                $exec = "python" if grep {/\.py/} $name;
+                $exec = "perl" if grep {/\.pl/} $name;
+            }
 
             my $cmd = "cd $dir; $exec ./$name>/dev/null 2>&1 \&";
 
