@@ -154,12 +154,22 @@ sub edit_app_list {
     chomp (my $vi_code = `type vi > /dev/null 2>&1; echo \$?`);
     chomp (my $nano_code = `type nano > /dev/null 2>&1; echo \$?`);
 
-    if ($vim_code ne 0 and $vi_code ne 0 and $nano_code ne 0) {
+    if ($vim_code eq 0) {
+        system "vim $g_applist_yaml";
+        exit 0;
+    }
+    elsif ($vi_code eq 0) {
+        system "vi $g_applist_yaml";
+        exit 0;
+    }
+    elsif ($nano_code eq 0) {
+        system "nano $g_applist_yaml";
+        exit 0;
+    }
+    else {
         say STDERR "No appropertie editor(vim/vi/nano) exist";
         exit 1;
     }
-
-    system "vim $g_applist_yaml";
 }
 
 sub start_all {
