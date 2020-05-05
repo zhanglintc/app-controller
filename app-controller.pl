@@ -34,6 +34,7 @@ Commands:
   stop  \tstop all your apps
   restart   \trestart all your apps
   list  \tshow "~/.app-controller/app-list.yml"
+  edit  \tedit "~/.app-controller/app-list.yml"
   add   \tadd an app to "~/.app-controller/app-list.yml"
   del   \tdel an app from "~/.app-controller/app-list.yml"
   help  \tshow this help
@@ -148,10 +149,22 @@ sub show_status {
 
     say "-" x 30;
 }
+sub edit_app_list {
+    chomp (my $vim_code = `type vim > /dev/null 2>&1; echo \$?`);
+    chomp (my $vi_code = `type vi > /dev/null 2>&1; echo \$?`);
+    chomp (my $nano_code = `type nano > /dev/null 2>&1; echo \$?`);
+
+    if ($vim_code ne 0 and $vi_code ne 0 and $nano_code ne 0) {
+        say STDERR "No appropertie editor(vim/vi/nano) exist";
+        exit 1;
+    }
+
+    system "vim $g_applist_yaml";
+}
 
 sub start_all {
     my $idx = shift;
-    my $quilt = shift;
+    my $quiet = shift;
 
     my $result_hash = {};
 
@@ -160,17 +173,17 @@ sub start_all {
     $idx = $idx // shift @ARGV;
     if (defined $idx) {
         if ($idx =~ /^[0-9]$/ and grep {/$idx/} 0..$#{$app_list}) {
-            say "Try to start app No.$idx: $$app_list[$idx]" unless $quilt;
+            say "Try to start app No.$idx: $$app_list[$idx]" unless $quiet;
             $app_list = [$$app_list[$idx]];
         }
         else {
-            say "Given index out of range. Available: 0 ~ $#{$app_list}\n" unless $quilt;
+            say STDERR "Given index out of range. Available: 0 ~ $#{$app_list}\n" unless $quiet;
             show_app_list();
-            exit;
+            exit 1;
         }
     }
     else {
-        say "Try to start all apps" unless $quilt;
+        say "Try to start all apps" unless $quiet;
     }
 
     for (@$app_list) {
@@ -194,7 +207,7 @@ sub start_all {
 
             my $cmd = "cd $dir; $exec ./$name>/dev/null 2>&1 \&";
 
-            say " - activate $_" unless $quilt;
+            say " - activate $_" unless $quiet;
             system "$cmd";
 
             my $details = grep_app_name($name);
@@ -206,16 +219,16 @@ sub start_all {
         }
     }
 
-    say "Start done" unless $quilt;
-    say "" unless $quilt;
+    say "Start done" unless $quiet;
+    say "" unless $quiet;
 
-    show_status() unless $quilt;
+    show_status() unless $quiet;
     return $result_hash;
 }
 
 sub stop_all {
     my $idx = shift;
-    my $quilt = shift;
+    my $quiet = shift;
 
     my $result_hash = {};
 
@@ -224,17 +237,17 @@ sub stop_all {
     my $idx = $idx // shift @ARGV;
     if (defined $idx) {
         if ($idx =~ /^[0-9]$/ and grep {/$idx/} 0..$#{$app_list}) {
-            say "Try to stop app No.$idx: $$app_list[$idx]" unless $quilt;
+            say "Try to stop app No.$idx: $$app_list[$idx]" unless $quiet;
             $app_list = [$$app_list[$idx]];
         }
         else {
-            say "Given index out of range. Available: 0 ~ $#{$app_list}\n";
+            say STDERR "Given index out of range. Available: 0 ~ $#{$app_list}\n";
             show_app_list();
-            exit;
+            exit 1;
         }
     }
     else {
-        say "Try to stop all apps" unless $quilt;
+        say "Try to stop all apps" unless $quiet;
     }
 
     for (@$app_list) {
@@ -248,15 +261,15 @@ sub stop_all {
         for my $item (@matched_items) {
             my $pid = $item->{pid};
             system "kill -9 $pid";
-            say " - stop $_" unless $quilt;
+            say " - stop $_" unless $quiet;
             $result_hash->{$_} = $pid;
         }
     }
 
-    say "Stop done" unless $quilt;
-    say "" unless $quilt;
+    say "Stop done" unless $quiet;
+    say "" unless $quiet;
 
-    show_status() unless $quilt;
+    show_status() unless $quiet;
     return $result_hash;
 }
 
@@ -266,13 +279,13 @@ sub restart_all {
     my $idx = shift @ARGV;
     if (defined $idx) {
         if ($idx =~ /^[0-9]$/ and grep {/$idx/} 0..$#{$app_list}) {
-            say "Try to restart app No.$idx: $$app_list[$idx]" unless $quilt;
+            say "Try to restart app No.$idx: $$app_list[$idx]" unless $quiet;
             $app_list = [$$app_list[$idx]];
         }
         else {
-            say "Given index out of range. Available: 0 ~ $#{$app_list}\n";
+            say STDERR "Given index out of range. Available: 0 ~ $#{$app_list}\n";
             show_app_list();
-            exit;
+            exit 1;
         }
     }
     else {
@@ -317,29 +330,29 @@ sub add_app {
     my $name = shift @ARGV;
 
     if (!defined $name) {
-        say "Filename missing";
-        say 'Please use "apc add [filename]"';
-        exit;
+        say STDERR "Filename missing";
+        say STDERR 'Please use "apc add [filename]"';
+        exit 1;
     }
 
     my $app_list = load_yaml_config();
     my $full_path = abs_path $name;
 
     if (-d $full_path) {
-        say qq/"$full_path" is a directory/;
-        exit;
+        say STDERR qq/"$full_path" is a directory/;
+        exit 1;
     }
 
     if (!-f $full_path) {
-        say qq/"$full_path" is not an existing file/;
-        exit;
+        say STDERR qq/"$full_path" is not an existing file/;
+        exit 1;
     }
 
     if (grep {/$full_path/} @$app_list)
     {
-        say qq/"$full_path" has already existed in app-list.yml\n/;
+        say STDERR qq/"$full_path" has already existed in app-list.yml\n/;
         show_app_list();
-        exit;
+        exit 1;
     }
 
     push @$app_list, $full_path;
@@ -352,23 +365,23 @@ sub del_app {
     my $seq = shift @ARGV;
 
     if (!defined $seq or $seq =~ /[^\d]+/) {
-        say "Parameter missing or not a number";
-        say 'Please use "apc del [index]"';
-        exit;
+        say STDERR "Parameter missing or not a number";
+        say STDERR 'Please use "apc del [index]"';
+        exit 1;
     }
 
     my $app_list = load_yaml_config();
 
     unless (@$app_list) {
-        say "Delete cannot be done because app-list.yml is null\n";
+        say STDERR "Delete cannot be done because app-list.yml is null\n";
         show_app_list();
-        exit;
+        exit 1;
     }
 
     if ($seq > $#{$app_list}){
-        say "Given index out of range. Available: 0 ~ $#{$app_list}\n";
+        say STDERR "Given index out of range. Available: 0 ~ $#{$app_list}\n";
         show_app_list();
-        exit;
+        exit 1;
     }
 
     splice @$app_list, $seq, 1;
@@ -383,7 +396,8 @@ sub main {
     my $command = shift @ARGV;
 
     if (!defined $command) {
-        say $default_msg;
+        say STDERR $default_msg;
+        exit 1;
     }
     elsif ($command eq "show") {
         show_status();
@@ -400,6 +414,9 @@ sub main {
     elsif ($command eq "list") {
         show_app_list();
     }
+    elsif ($command eq "edit") {
+        edit_app_list();
+    }
     elsif ($command eq "add") {
         add_app();
     }
@@ -410,7 +427,8 @@ sub main {
         say $help_msg;
     }
     else {
-        say $unknown_msg;
+        say STDERR $unknown_msg;
+        exit 1;
     }
 }
 
