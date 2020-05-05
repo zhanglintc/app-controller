@@ -65,6 +65,9 @@ apc add foo.bar
 # show control list
 apc list
 
+# edit control list(try vim/vi/nano)
+apc edit
+
 # del an app from control list
 apc del 0
 ```
