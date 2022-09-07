@@ -125,7 +125,7 @@ sub obtain_detail_of_pid {
             s/[\[\]]//g;  # remove left`[` and right `]`
             $_ || undef;
         }->(),
-        full_path => $full_path,
+        full_path => $full_path // $app_name,
     };
 
     return $detail;
