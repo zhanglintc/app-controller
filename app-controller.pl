@@ -29,6 +29,7 @@ Usage:
   apc [command]
 
 Commands:
+  view  \tview detail of one given pid
   show  \tshow status of all your apps
   start \tstart all your apps
   stop  \tstop all your apps
@@ -75,6 +76,37 @@ sub dump_yaml_config {
     close $fw;
 }
 
+sub obtain_detail_of_pid {
+    my $pid = shift;
+
+    chomp $pid;
+
+    my $cwd = readlink "/proc/$pid/cwd";
+    return undef unless defined $cwd;
+
+    my $exe = readlink "/proc/$pid/exe";
+    return undef unless defined $exe;
+
+    my $cmdline = `cat /proc/$pid/cmdline`;
+    my @cmdline_arr = split /\0/, $cmdline;
+    my $app_name = $cmdline_arr[1];
+    my $full_path = abs_path catfile($cwd, $app_name);
+
+    my $port = `netstat -ntlp 2>/dev/null | grep ${pid} | awk '{print \$4}' | awk -F ':' '{print \$2}'`; chomp $port;
+    $port = undef if not $port;
+
+    my $detail = {
+        pid => $pid,
+        exe => $exe,
+        cwd => $cwd,
+        app => $app_name,
+        port => $port,
+        full_path => $full_path,
+    };
+
+    return $detail;
+}
+
 sub grep_app_name {
     my $name = shift;
 
@@ -82,31 +114,8 @@ sub grep_app_name {
 
     my @details;
     for my $pid (@pids) {
-        chomp $pid;
-
-        my $cwd = readlink "/proc/$pid/cwd";
-        next unless defined $cwd;
-
-        my $exe = readlink "/proc/$pid/exe";
-        next unless defined $exe;
-
-        my $cmdline = `cat /proc/$pid/cmdline`;
-        my @cmdline_arr = split /\0/, $cmdline;
-        my $app_name = $cmdline_arr[1];
-        my $full_path = abs_path catfile($cwd, $app_name);
-
-        my $port = `netstat -ntlp 2>/dev/null | grep ${pid} | awk '{print \$4}' | awk -F ':' '{print \$2}'`; chomp $port;
-        $port = undef if not $port;
-
-        my $detail = {
-            pid => $pid,
-            exe => $exe,
-            cwd => $cwd,
-            app => $app_name,
-            port => $port,
-            full_path => $full_path,
-        };
-
+        my $detail = obtain_detail_of_pid($pid);
+        next unless $detail;
         push @details, $detail;
     }
 
@@ -120,6 +129,20 @@ sub active_or_down {
     my $details = grep_app_name($name);
 
     return grep {$_->{full_path} eq $expect_name} @$details;
+}
+
+sub view_one_pid {
+    my $pid = shift @ARGV;
+
+    if (!defined $pid) {
+        say STDERR "pid missing";
+        say STDERR 'Please use "apc view [pid]"';
+        exit 1;
+    }
+
+    my $detail = obtain_detail_of_pid($pid);
+
+    say Dumper $detail;
 }
 
 sub show_status {
@@ -408,6 +431,9 @@ sub main {
     if (!defined $command) {
         say STDERR $default_msg;
         exit 1;
+    }
+    elsif ($command eq "view") {
+        view_one_pid();
     }
     elsif ($command eq "show") {
         show_status();
