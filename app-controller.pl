@@ -58,6 +58,26 @@ sub init {
     }
 }
 
+sub data_dump {
+    my $data = shift;
+    local $Data::Dumper::Indent = 2;
+    local $Data::Dumper::Terse = 1;
+    local $Data::Dumper::Useqq = 1;
+    local $Data::Dumper::Pair = ': ';
+    local $Data::Dumper::Trailingcomma = 1;
+    local $Data::Dumper::Sortkeys = 1;
+    return Dumper $data;
+}
+
+sub data_stringify {
+    my $data = shift;
+    local $Data::Dumper::Indent = 0;
+    local $Data::Dumper::Terse = 1;
+    local $Data::Dumper::Useqq = 1;
+    local $Data::Dumper::Pair = ': ';
+    return Dumper $data;
+}
+
 sub load_yaml_config {
     open my $fr, "<", $g_applist_yaml;
     my @content = <$fr>;
@@ -92,15 +112,19 @@ sub obtain_detail_of_pid {
     my $app_name = $cmdline_arr[1];
     my $full_path = abs_path catfile($cwd, $app_name);
 
-    my $port = `netstat -ntlp 2>/dev/null | grep ${pid} | awk '{print \$4}' | awk -F ':' '{print \$2}'`; chomp $port;
-    $port = undef if not $port;
+    my $netstat_port = `netstat -ntlp 2>/dev/null | grep ${pid} | awk '{print \$4}' | awk -F ':' '{print \$2}'`; chomp $netstat_port;
+    my @ports = split /\n/, $netstat_port;
 
     my $detail = {
         pid => $pid,
         exe => $exe,
         cwd => $cwd,
         app => $app_name,
-        port => $port,
+        port => sub{
+            $_ = data_stringify(\@ports);
+            s/[\[\]]//g;  # remove left`[` and right `]`
+            $_ || undef;
+        }->(),
         full_path => $full_path,
     };
 
@@ -135,14 +159,20 @@ sub view_one_pid {
     my $pid = shift @ARGV;
 
     if (!defined $pid) {
-        say STDERR "pid missing";
-        say STDERR 'Please use "apc view [pid]"';
+        say STDERR "PID missing";
+        say STDERR 'Please use "apc view [PID]"';
         exit 1;
     }
 
     my $detail = obtain_detail_of_pid($pid);
 
-    say Dumper $detail;
+    if ($detail) {
+        say "Detail of PID '$pid':";
+        say data_dump($detail);
+    } else {
+        say "No result for PID '$pid'";
+        say "PID '$pid' is not exist or try to use `sudo apc view $pid`";
+    }
 }
 
 sub show_status {
