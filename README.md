@@ -38,6 +38,9 @@ cd app-controller
 ## Usage
 
 ``` Shell
+# view detail of one given pid
+apc view 10389
+
 # show app running status
 apc show
 
