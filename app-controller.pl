@@ -115,6 +115,8 @@ sub obtain_detail_of_pid {
     my $netstat_port = `netstat -ntlp 2>/dev/null | grep ${pid} | awk '{print \$4}' | awk -F ':' '{print \$2}'`; chomp $netstat_port;
     my @ports = split /\n/, $netstat_port;
 
+    my $owner = `stat -c "%U" $full_path`; chomp $owner;
+
     my $detail = {
         pid => $pid,
         exe => $exe,
@@ -126,6 +128,7 @@ sub obtain_detail_of_pid {
             $_ || undef;
         }->(),
         full_path => $full_path // $app_name,
+        owner => $owner,
     };
 
     return $detail;
