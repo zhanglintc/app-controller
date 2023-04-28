@@ -182,6 +182,7 @@ sub show_status {
     my $separator = "\t";
 
     say "Status:";
+    say `free -m | sed -n '2p' | awk '{printf("Mem used: %.2f%%", \$3/\$2*100)}'`;
     say "-" x 30;
     say "No${separator}Status${separator}Pid${separator}Port${separator}Applictaion";
 
