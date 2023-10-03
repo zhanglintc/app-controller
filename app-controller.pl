@@ -14,6 +14,7 @@ my $__dir__     = dirname $__abspath__;
 my $__file__    = basename $__abspath__;
 
 my $g_applist_yaml;
+my $g_wx_notify_yaml;
 
 my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
 
@@ -38,6 +39,7 @@ Commands:
   edit  \tedit "~/.app-controller/app-list.yml"
   add   \tadd an app to "~/.app-controller/app-list.yml"
   del   \tdel an app from "~/.app-controller/app-list.yml"
+  notify    \tsend msg to WX
   help  \tshow this help
 HEREDOC
 
@@ -52,9 +54,11 @@ sub init {
 
     if (-d $apc_home) {
         $g_applist_yaml = catfile($apc_home, "applist.yml");
+        $g_wx_notify_yaml = catfile($apc_home, "wxnotify.yml");
     }
     else {
         $g_applist_yaml = catfile($__dir__, "applist.yml");
+        $g_wx_notify_yaml = catfile($__dir__, "wxnotify.yml");
     }
 }
 
@@ -79,12 +83,14 @@ sub data_stringify {
 }
 
 sub load_yaml_config {
-    open my $fr, "<", $g_applist_yaml;
+    my $yaml_file = shift // $g_applist_yaml;
+
+    open my $fr, "<", $yaml_file;
     my @content = <$fr>;
     close $fr;
 
-    my $app_list = YAML::Load join("", @content);
-    return $app_list;
+    my $yaml_config = YAML::Load join("", @content);
+    return $yaml_config;
 }
 
 sub dump_yaml_config {
@@ -457,6 +463,39 @@ sub del_app {
     show_app_list();
 }
 
+sub wx_notify {
+    my $text = shift @ARGV;
+    chomp $text;
+
+    if (!-f $g_wx_notify_yaml) {
+        say "apc: YAML file: '$g_wx_notify_yaml' not exist";
+        return;
+    }
+
+    my $yaml_config = load_yaml_config($g_wx_notify_yaml);
+    if (!$yaml_config->{username}) {
+        say "apc: 'username' not in $g_wx_notify_yaml";
+        return;
+    }
+    if (!$yaml_config->{password}) {
+        say "apc: 'password' not in $g_wx_notify_yaml";
+        return;
+    }
+
+    my $username = $yaml_config->{username} // "";
+    my $password = $yaml_config->{password} // "";
+
+    my $params = [
+        "username=$username",
+        "password=$password",
+        "text=$text",
+    ];
+    @$params = map { qq/--data-urlencode "$_"/ } @$params;
+
+    my $data_urlencode_str = join ' ', @$params;
+    say "apc: " . `curl -s --get ${data_urlencode_str} wx.zhanglintc.co/send`;
+}
+
 sub main {
     init();
 
@@ -492,6 +531,9 @@ sub main {
     }
     elsif ($command eq "del") {
         del_app();
+    }
+    elsif ($command eq "notify") {
+        wx_notify();
     }
     elsif ($command eq "help") {
         say $help_msg;
