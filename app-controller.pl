@@ -467,6 +467,11 @@ sub wx_notify {
     my $text = shift @ARGV;
     chomp $text;
 
+    if (!$text) {
+        say "apc: argument missing, need a text string";
+        return;
+    }
+
     if (!-f $g_wx_notify_yaml) {
         say "apc: YAML file: '$g_wx_notify_yaml' not exist";
         return;
