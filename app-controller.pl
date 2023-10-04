@@ -193,7 +193,7 @@ sub show_status {
 
     say "Status:";
     say qq!Mem used: @{[`free -m | sed -n '2p' | awk '{printf("%.2f%%", \$3/\$2*100)}'`]}!;
-    say qq!CPU used: @{[sprintf("%.2f%%", $cpu_load_avg)]}!;
+    say qq!CPU used: @{[sprintf("%05.2f%%", $cpu_load_avg)]}!;
     say "-" x 30;
     say "No${separator}Status${separator}Pid${separator}Port${separator}Applictaion";
 
