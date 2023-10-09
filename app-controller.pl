@@ -187,8 +187,13 @@ sub view_one_pid {
 sub show_status {
     my $separator = "\t";
 
+    chomp(my $cpu_num = `grep -c processor /proc/cpuinfo`);
+    chomp(my $cpu_usage = `top -b -n 1 | grep "Cpu(s)" | awk '{print \$2+\$4}'`);
+    my $cpu_load_avg = $cpu_usage / $cpu_num;
+
     say "Status:";
-    say `free -m | sed -n '2p' | awk '{printf("Mem used: %.2f%%", \$3/\$2*100)}'`;
+    say qq!Mem used: @{[`free -m | sed -n '2p' | awk '{printf("%.2f%%", \$3/\$2*100)}'`]}!;
+    say qq!CPU used: ${cpu_load_avg}%!;
     say "-" x 30;
     say "No${separator}Status${separator}Pid${separator}Port${separator}Applictaion";
 
