@@ -116,7 +116,7 @@ sub obtain_detail_of_pid {
     my $cmdline = `cat /proc/$pid/cmdline`;
     my @cmdline_arr = split /\0/, $cmdline;
     my $app_name = $cmdline_arr[1];
-    my $full_path = abs_path catfile($cwd, $app_name);
+    my $full_path = (abs_path catfile($cwd, $app_name)) // $app_name;  # abs_path(XXX) can be undef
 
     my $netstat_port = `netstat -ntlp 2>/dev/null | grep ${pid} | awk '{print \$4}' | awk -F ':' '{print \$2}'`; chomp $netstat_port;
     my @ports = split /\n/, $netstat_port;
@@ -133,7 +133,7 @@ sub obtain_detail_of_pid {
             s/[\[\]]//g;  # remove left`[` and right `]`
             $_ || undef;
         }->(),
-        full_path => $full_path // $app_name,
+        full_path => $full_path,
         owner => $owner,
     };
 
