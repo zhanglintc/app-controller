@@ -265,13 +265,13 @@ sub start_all {
         say "Try to start all apps" unless $quiet;
     }
 
-    for (@$app_list) {
-        my $expect_name = $_;
-        my $dir = dirname $_;
-        my $name = basename $_;
-        my $abs_path = catfile($dir, $name);
+    for my $app (@$app_list) {
+        my $expect_name = $app;
+        my $dir = dirname $app;
+        my $app_name = basename $app;
+        my $abs_path = catfile($dir, $app_name);
 
-        unless (active_or_down($_, $name)) {
+        unless (active_or_down($app, $app_name)) {
             my $exec = "";
 
             chomp(my $shebang = `head -n1 $abs_path`);
@@ -279,21 +279,21 @@ sub start_all {
                 $exec = $shebang;
             }
             else {
-                $exec = "ruby" if grep {/\.rb/} $name;
-                $exec = "python" if grep {/\.py/} $name;
-                $exec = "perl" if grep {/\.pl/} $name;
+                $exec = "ruby" if grep {/\.rb/} $app_name;
+                $exec = "python" if grep {/\.py/} $app_name;
+                $exec = "perl" if grep {/\.pl/} $app_name;
             }
 
-            my $cmd = "cd $dir; $exec ./$name>/dev/null 2>&1 \&";
+            my $cmd = "cd $dir; $exec ./$app_name>/dev/null 2>&1 \&";
 
-            say " - activate $_" unless $quiet;
+            say " - activate $app_name" unless $quiet;
             system "$cmd";
 
-            my $details = grep_app_name($name);
+            my $details = grep_app_name($app_name);
             my @matched_items = grep {$_->{full_path} eq $expect_name} @$details;
             for my $item (@matched_items) {
                 my $pid = $item->{pid};
-                $result_hash->{$_} = $pid;
+                $result_hash->{$app_name} = $pid;
             }
         }
     }
