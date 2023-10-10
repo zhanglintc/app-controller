@@ -201,17 +201,17 @@ sub show_status {
     my $app_list = load_yaml_config();
 
     my $idx = 0;
-    for (@$app_list) {
-        my $dir = dirname $_;
-        my $name = basename $_;
+    for my $app (@$app_list) {
+        my $dir = dirname $app;
+        my $app_name = basename $app;
 
-        my @items = active_or_down($_, $name);
+        my @items = active_or_down($app, $app_name);
         my $item = pop @items;
 
         my $status = $item ? 'Active' : 'Down';
         my $pid = $item->{pid} // "-";
         my $port = $item->{port} // "-";
-        my $full_path = $item->{full_path} // $_;
+        my $full_path = $item->{full_path} // $app;
 
         say "@{[$idx++]}${separator}${status}${separator}${pid}${separator}${port}${separator}${full_path}";
     }
