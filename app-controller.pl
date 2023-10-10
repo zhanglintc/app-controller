@@ -329,19 +329,19 @@ sub stop_all {
         say "Try to stop all apps" unless $quiet;
     }
 
-    for (@$app_list) {
-        my $expect_name = $_;
-        my $dir = dirname $_;
-        my $name = basename $_;
+    for my $app (@$app_list) {
+        my $expect_name = $app;
+        my $dir = dirname $app;
+        my $app_name = basename $app;
 
-        my $details = grep_app_name($name);
+        my $details = grep_app_name($app_name);
         my @matched_items = grep {$_->{full_path} eq $expect_name} @$details;
 
         for my $item (@matched_items) {
             my $pid = $item->{pid};
             system "kill -9 $pid";
-            say " - stop $_" unless $quiet;
-            $result_hash->{$_} = $pid;
+            say " - stop $app_name" unless $quiet;
+            $result_hash->{$app_name} = $pid;
         }
     }
 
