@@ -374,12 +374,12 @@ sub restart_all {
     my $stop_result = stop_all($idx, 1);
     my $start_result = start_all($idx, 1);
 
-    foreach (keys %$stop_result)
+    foreach my $key (keys %$stop_result)
     {
-        my $old_pid = $stop_result->{$_};
-        my $new_pid = $start_result->{$_};
+        my $old_pid = $stop_result->{$key};
+        my $new_pid = $start_result->{$key};
 
-        say " - restart $_: $old_pid => $new_pid";
+        say " - restart $key: $old_pid => $new_pid";
     }
 
     say "Restart done";
