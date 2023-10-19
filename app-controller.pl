@@ -336,10 +336,20 @@ sub start_all {
                 $exec = "perl" if grep {/\.pl/} $app_name;
             }
 
-            my $cmd = "cd $dir 2>/dev/null; $exec ./$app_name>/dev/null 2>&1 \&";
+            my $apc_home = catfile($ENV{"HOME"}, ".app-controller");
+            my $output_device;
+            if (-d $apc_home) {
+                `mkdir -p $apc_home/nohups 2>/dev/null`;
+                $output_device = "$apc_home/nohups/$app_name.nohup";
+            }
+            else {
+                $output_device = "/dev/null";
+            }
+
+            my $start_cmd = "cd $dir 2>/dev/null; $exec ./$app_name >$output_device 2>&1 \&";
 
             say " - activate $app_name" unless $quiet;
-            system "$cmd";
+            system "$start_cmd";
 
             my $details = grep_app_name($app_name);
             my @matched_items = grep {$_->{full_path} eq $expect_name} @$details;
