@@ -62,6 +62,20 @@ sub init {
     }
 }
 
+sub _unique {
+    my $raw_array = shift;
+
+    my @uniq_array = ();
+    my $seen = {};
+    for $it (@$raw_array) {
+        unless ($seen->{$it}) {
+            $seen->{$it} = 1;
+            push @uniq_array, $it;
+        }
+    }
+    return wantarray ? @uniq_array : \@uniq_array;
+}
+
 sub data_dump {
     my $data = shift;
     local $Data::Dumper::Indent = 2;
@@ -242,18 +256,56 @@ sub edit_app_list {
 }
 
 sub start_all {
-    my $idx = shift;
+    my $index_str = shift;
     my $quiet = shift;
 
     my $result_hash = {};
 
     my $app_list = load_yaml_config();
 
-    $idx = $idx // shift @ARGV;
-    if (defined $idx) {
-        if ($idx =~ /^[0-9]$/ and grep {/$idx/} 0..$#{$app_list}) {
+    $index_str = $index_str // shift @ARGV;
+    if (defined $index_str) {
+        if ($index_str =~ /^[0-9]$/ and grep {/$index_str/} 0..$#{$app_list}) {
+            # start 5
+            my $idx = $index_str;
             say "Try to start app No.$idx: $$app_list[$idx]" unless $quiet;
             $app_list = [$$app_list[$idx]];
+        }
+        elsif ($index_str =~ /^(\d)-(\d)$/ and sub {
+            my @idxes = ($1 .. $2);
+            for my $idx (@idxes) {
+                return 0 unless (grep {/$idx/} 0..$#{$app_list});
+            }
+            return 1;
+        }->()) {
+            # start 0-5
+            my $tmp_list = [];
+            $index_str =~ /^(\d)-(\d)$/;
+            my @idxes = ($1 .. $2);
+            for my $idx (@idxes) {
+                say "Try to start app No.$idx: $$app_list[$idx]" unless $quiet;
+                push @$tmp_list, $$app_list[$idx]
+            }
+            $app_list = $tmp_list;
+        }
+        elsif ($index_str =~ /,/ and sub {
+            my @idxes = split /,/, $index_str, -1;
+            for my $idx (@idxes) {
+                return 0 if $idx eq "";
+                return 0 unless ($idx =~ /^[0-9]$/);
+                return 0 unless (grep {/$idx/} 0..$#{$app_list});
+            }
+            return 1;
+        }->()) {
+            # start 0,1,2,3,4,5
+            my $tmp_list = [];
+            my @idxes = split /,/, $index_str, -1;
+            @idxes = sort(_unique(\@idxes));
+            for my $idx (@idxes) {
+                say "Try to start app No.$idx: $$app_list[$idx]" unless $quiet;
+                push @$tmp_list, $$app_list[$idx]
+            }
+            $app_list = $tmp_list;
         }
         else {
             say STDERR "Given index out of range. Available: 0 ~ $#{$app_list}\n" unless $quiet;
@@ -274,7 +326,7 @@ sub start_all {
         unless (active_or_down($app, $app_name)) {
             my $exec = "";
 
-            chomp(my $shebang = `head -n1 $abs_path`);
+            chomp(my $shebang = `head -n1 $abs_path 2>/dev/null`);
             if ($shebang =~ s/^#!//) {
                 $exec = $shebang;
             }
@@ -284,7 +336,7 @@ sub start_all {
                 $exec = "perl" if grep {/\.pl/} $app_name;
             }
 
-            my $cmd = "cd $dir; $exec ./$app_name>/dev/null 2>&1 \&";
+            my $cmd = "cd $dir 2>/dev/null; $exec ./$app_name>/dev/null 2>&1 \&";
 
             say " - activate $app_name" unless $quiet;
             system "$cmd";
