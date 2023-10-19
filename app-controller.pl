@@ -361,7 +361,7 @@ sub stop_all {
     my $index_str = shift;
     my $quiet = shift;
 
-    my $result_hash = {};
+    my $result_list = [];
 
     my $app_list = load_yaml_config();
 
@@ -431,7 +431,10 @@ sub stop_all {
             my $pid = $item->{pid};
             system "kill -9 $pid";
             say " - stop $app_name" unless $quiet;
-            $result_hash->{$app_name} = $pid;
+            push @$result_list, {
+                app_name => $app_name,
+                pid => $pid,
+            };
         }
     }
 
@@ -439,7 +442,7 @@ sub stop_all {
     say "" unless $quiet;
 
     show_status() unless $quiet;
-    return $result_hash;
+    return $result_list;
 }
 
 sub restart_all {
@@ -495,12 +498,13 @@ sub restart_all {
     my $stop_result = stop_all($index_str, 1);
     my $start_result = start_all($index_str, 1);
 
-    foreach my $key (keys %$stop_result)
+    foreach my $it (@$stop_result)
     {
-        my $old_pid = $stop_result->{$key};
-        my $new_pid = $start_result->{$key};
+        my $app_name = $it->{app_name};
+        my $old_pid = $it->{pid};
+        my $new_pid = $start_result->{$app_name};
 
-        say " - restart $key: $old_pid => $new_pid";
+        say " - restart $app_name: $old_pid => $new_pid";
     }
 
     say "Restart done";
