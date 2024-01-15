@@ -129,7 +129,7 @@ sub obtain_detail_of_pid {
 
     my $cmdline = `cat /proc/$pid/cmdline`;
     my @cmdline_arr = split /\0/, $cmdline;
-    my $app_name = $cmdline_arr[-1];  # always use last one
+    my $app_name = $cmdline_arr[1] ne "-jar" ? $$cmdline_arr[1] : $cmdline_arr[2];
     my $full_path = (abs_path catfile($cwd, $app_name)) // $app_name;  # abs_path(XXX) can be undef
 
     # port: ipv4 => \$2, ipv6 => \$4
