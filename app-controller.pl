@@ -129,10 +129,11 @@ sub obtain_detail_of_pid {
 
     my $cmdline = `cat /proc/$pid/cmdline`;
     my @cmdline_arr = split /\0/, $cmdline;
-    my $app_name = $cmdline_arr[1];
+    my $app_name = $cmdline_arr[-1];  # always use last one
     my $full_path = (abs_path catfile($cwd, $app_name)) // $app_name;  # abs_path(XXX) can be undef
 
-    my $netstat_port = `netstat -ntlp 2>/dev/null | grep ${pid} | awk '{print \$4}' | awk -F ':' '{print \$2}'`; chomp $netstat_port;
+    # port: ipv4 => \$2, ipv6 => \$4
+    my $netstat_port = `netstat -ntlp 2>/dev/null | grep ${pid} | awk '{print \$4}' | awk -F ':' '{print \$2 ? \$2 : \$4}'`; chomp $netstat_port;
     my @ports = split /\n/, $netstat_port;
 
     my $owner = `stat -c "%U" $full_path`; chomp $owner;
@@ -334,6 +335,7 @@ sub start_all {
                 $exec = "ruby" if grep {/\.rb/} $app_name;
                 $exec = "python" if grep {/\.py/} $app_name;
                 $exec = "perl" if grep {/\.pl/} $app_name;
+                $exec = "java -jar" if grep {/\.jar/} $app_name;
             }
 
             my $apc_home = catfile($ENV{"HOME"}, ".app-controller");
