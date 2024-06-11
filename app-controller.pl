@@ -2,6 +2,7 @@
 
 use 5.010;
 
+use lib "./";
 use YAML;
 use Cwd qw/abs_path/;
 use File::Basename qw/dirname basename/;
