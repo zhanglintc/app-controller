@@ -445,7 +445,7 @@ sub stop_all {
 
         for my $item (@matched_items) {
             my $pid = $item->{pid};
-            system "kill -9 $pid";
+            system "pkill -P $pid; kill -9 $pid";
             say " - stop $app_name" unless $quiet;
             push @$result_list, {
                 app_name => $app_name,
