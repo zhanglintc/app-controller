@@ -335,6 +335,7 @@ sub start_all {
                 $exec = $shebang;
             }
             else {
+                $exec = "sh" if grep {/\.sh/} $app_name;
                 $exec = "ruby" if grep {/\.rb/} $app_name;
                 $exec = "python" if grep {/\.py/} $app_name;
                 $exec = "perl" if grep {/\.pl/} $app_name;
