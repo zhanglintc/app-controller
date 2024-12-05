@@ -138,6 +138,16 @@ sub obtain_detail_of_pid {
     # port: ipv4 => \$2, ipv6 => \$4
     my $netstat_port = `netstat -ntlp 2>/dev/null | grep ${pid} | awk '{print \$4}' | awk -F ':' '{print \$2 ? \$2 : \$4}'`; chomp $netstat_port;
     my @ports = split /\n/, $netstat_port;
+    if (!@ports) {
+        # if no ports for current process, search all sub processes
+        my $children = `cat /proc/$pid/task/$pid/children`;
+        my @child_pids = split / /, $children;
+        foreach my $child_pid (@child_pids) {
+            my $child_netstat_port = `netstat -ntlp 2>/dev/null | grep ${child_pid} | awk '{print \$4}' | awk -F ':' '{print \$2 ? \$2 : \$4}'`; chomp $child_netstat_port;
+            my @child_ports = split /\n/, $child_netstat_port;
+            push @ports, $_ foreach @child_ports;
+        }
+    }
 
     my $owner = `stat -c "%U" $full_path`; chomp $owner;
 
@@ -335,7 +345,7 @@ sub start_all {
                 $exec = $shebang;
             }
             else {
-                $exec = "sh" if grep {/\.sh/} $app_name;
+                $exec = "bash" if grep {/\.sh/} $app_name;
                 $exec = "ruby" if grep {/\.rb/} $app_name;
                 $exec = "python" if grep {/\.py/} $app_name;
                 $exec = "perl" if grep {/\.pl/} $app_name;
