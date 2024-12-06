@@ -218,7 +218,7 @@ sub tail_one_log {
 
     my $app_list = load_yaml_config();
 
-    if ($index =~ /^[0-9]$/ and grep {/$index_str/} 0..$#{$app_list}) {
+    if ($index =~ /^[0-9]$/ and grep {/$index/} 0..$#{$app_list}) {
         my $apc_home = catfile($ENV{"HOME"}, ".app-controller");
         my $nohup_name = qq/@{[basename $$app_list[$idx]]}.nohup/;
         my $nohup_path = qq!$apc_home/nohups/$nohup_name!;
