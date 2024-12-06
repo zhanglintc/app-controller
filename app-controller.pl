@@ -220,9 +220,9 @@ sub tail_one_log {
 
     if ($index =~ /^[0-9]$/ and grep {/$index/} 0..$#{$app_list}) {
         my $apc_home = catfile($ENV{"HOME"}, ".app-controller");
-        my $nohup_name = qq/@{[basename $$app_list[$idx]]}.nohup/;
+        my $nohup_name = qq/@{[basename $$app_list[$index]]}.nohup/;
         my $nohup_path = qq!$apc_home/nohups/$nohup_name!;
-        say qq/Try to tail app No.$index nohup log: $$app_list[$idx]\n/;
+        say qq/Try to tail app No.$index nohup log: $$app_list[$index]\n/;
         my $command = qq/tail @ARGV $nohup_path/;
         say $command; system $command;
     } else {
