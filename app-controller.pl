@@ -34,6 +34,7 @@ Usage:
 
 Commands:
   view  \tview detail of one given pid
+  log   \ttail one given log
   show  \tshow status of all your apps
   start \tstart all your apps
   stop  \tstop all your apps
@@ -209,6 +210,26 @@ sub view_one_pid {
     } else {
         say "No result for PID '$pid'";
         say "PID '$pid' is not exist or try to use `sudo apc view $pid`";
+    }
+}
+
+sub tail_one_log {
+    my $index = shift @ARGV;
+
+    my $app_list = load_yaml_config();
+
+    if ($index =~ /^[0-9]$/ and grep {/$index_str/} 0..$#{$app_list}) {
+        my $apc_home = catfile($ENV{"HOME"}, ".app-controller");
+        my $nohup_name = qq/@{[basename $$app_list[$idx]]}.nohup/;
+        my $nohup_path = qq!$apc_home/nohups/$nohup_name!;
+        say qq/Try to tail app No.$index nohup log: $$app_list[$idx]\n/;
+        my $command = qq/tail @ARGV $nohup_path/;
+        say qq/$command/;
+        say `$command`;
+    } else {
+        say STDERR "Given index out of range. Available: 0 ~ $#{$app_list}\n";
+        show_app_list();
+        exit 1;
     }
 }
 
@@ -669,6 +690,9 @@ sub main {
     }
     elsif ($command eq "view") {
         view_one_pid();
+    }
+    elsif ($command eq "log") {
+        tail_one_log();
     }
     elsif ($command eq "show") {
         show_status();
