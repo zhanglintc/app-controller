@@ -224,8 +224,7 @@ sub tail_one_log {
         my $nohup_path = qq!$apc_home/nohups/$nohup_name!;
         say qq/Try to tail app No.$index nohup log: $$app_list[$idx]\n/;
         my $command = qq/tail @ARGV $nohup_path/;
-        say qq/$command/;
-        say `$command`;
+        say $command; system $command;
     } else {
         say STDERR "Given index out of range. Available: 0 ~ $#{$app_list}\n";
         show_app_list();
