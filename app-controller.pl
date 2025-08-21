@@ -152,6 +152,8 @@ sub obtain_detail_of_pid {
 
     my $owner = `stat -c "%U" $full_path`; chomp $owner;
 
+    my $pgid = `cat /proc/$pid/stat | awk '{print \$5}'`; chomp $pgid;
+
     my $detail = {
         pid => $pid,
         exe => $exe,
@@ -164,6 +166,7 @@ sub obtain_detail_of_pid {
         }->(),
         full_path => $full_path,
         owner => $owner,
+        pgid => $pgid,
     };
 
     return $detail;
@@ -382,7 +385,7 @@ sub start_all {
                 $output_device = "/dev/null";
             }
 
-            my $start_cmd = "cd $dir 2>/dev/null; $exec ./$app_name >$output_device 2>&1 \&";
+            my $start_cmd = "cd $dir 2>/dev/null; setsid $exec ./$app_name >$output_device 2>&1 \&";
 
             say " - activate $app_name" unless $quiet;
             system "$start_cmd";
@@ -475,7 +478,8 @@ sub stop_all {
 
         for my $item (@matched_items) {
             my $pid = $item->{pid};
-            system "pkill -P $pid; kill -9 $pid";
+            my $pgid = $item->{pgid};
+            system "kill -9 -- -$pgid;";
             say " - stop $app_name" unless $quiet;
             push @$result_list, {
                 app_name => $app_name,
