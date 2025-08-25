@@ -385,7 +385,7 @@ sub start_all {
                 $output_device = "/dev/null";
             }
 
-            my $start_cmd = "cd $dir 2>/dev/null; setsid $exec ./$app_name >$output_device 2>&1 \&";
+            my $start_cmd = "cd $dir 2>/dev/null; setsid $exec ./$app_name >>$output_device 2>&1 \&";
 
             say " - activate $app_name" unless $quiet;
             system "$start_cmd";
